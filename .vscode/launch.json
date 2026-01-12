@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch JavaFX App",
+            "request": "launch",
+            "mainClass": "com.example.Main",
+            "projectName": "robot-simulator",
+            "vmArgs": "--module-path ${env:HOME}/.m2/repository/org/openjfx --add-modules javafx.controls,javafx.fxml"
+        }
+    ]
+}
