@@ -1,9 +1,13 @@
 package com.example;
 
+import static com.example.GridConstants.BACKGROUND_COLOR;
+import static com.example.GridConstants.CELL_SIZE;
+import static com.example.GridConstants.GRID_SIZE;
+
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
-
-import static com.example.GridConstants.BACKGROUND_COLOR;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 
 /**
  * Main coordinator that builds the complete scene.
@@ -11,20 +15,31 @@ import static com.example.GridConstants.BACKGROUND_COLOR;
 public class ScreenBuilder {
 
     public static Scene buildScene() {
-        GridManager gridManager = new GridManager();
-        ControlPanel controlPanel = new ControlPanel(gridManager);
+    GridManager gridManager = new GridManager();
+    
+    // Create a pane for robots to move on top of the grid
+    Pane robotLayer = new Pane();
+    robotLayer.setPrefSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    robotLayer.setMouseTransparent(true);
+    
+    // IMPORTANT: Add the same padding as the GridPane to align robots with cells
+    // robotLayer.setStyle("-fx-padding: 20;");
+    
+    RobotManager robotManager = new RobotManager(robotLayer, gridManager);
+    ControlPanel controlPanel = new ControlPanel(gridManager, robotManager);
 
-        // Set up listener to update counter when grid state changes
-        gridManager.setListener(controlPanel::updateCounter);
+    gridManager.setListener(controlPanel::updateCounter);
 
-        BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: " + toHexString(BACKGROUND_COLOR) + ";");
+    StackPane centerPane = new StackPane();
+    centerPane.getChildren().addAll(gridManager.buildGrid(), robotLayer);
 
-        root.setCenter(gridManager.buildGrid());
-        root.setBottom(controlPanel.build());
+    BorderPane root = new BorderPane();
+    root.setStyle("-fx-background-color: " + toHexString(BACKGROUND_COLOR) + ";");
+    root.setCenter(centerPane);
+    root.setBottom(controlPanel.build());
 
-        return new Scene(root, 800, 850);
-    }
+    return new Scene(root, 800, 900);
+}
 
     private static String toHexString(javafx.scene.paint.Color color) {
         return String.format("#%02X%02X%02X",

@@ -1,9 +1,11 @@
 package com.example;
 
 import static com.example.GridConstants.CELL_SIZE;
+import static com.example.GridConstants.CELL_STROKE;
 import static com.example.GridConstants.CLICKED_COLOR;
 import static com.example.GridConstants.DEFAULT_COLOR;
 import static com.example.GridConstants.DIRTY_COLOR;
+import static com.example.GridConstants.GRID_PADDING;
 import static com.example.GridConstants.GRID_SIZE;
 import static com.example.GridConstants.HOVER_COLOR;
 
@@ -35,8 +37,7 @@ public class GridManager {
 
     public GridPane buildGrid() {
         GridPane gridPane = new GridPane();
-        gridPane.setStyle("-fx-padding: 20;");
-
+        gridPane.setStyle("-fx-padding: " + GRID_PADDING + ";");
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int col = 0; col < GRID_SIZE; col++) {
                 StackPane cell = createCell(row, col);
@@ -51,7 +52,7 @@ public class GridManager {
         Rectangle rect = new Rectangle(CELL_SIZE, CELL_SIZE);
         rect.setFill(DEFAULT_COLOR);
         rect.setStroke(Color.GRAY);
-        rect.setStrokeWidth(1);
+        rect.setStrokeWidth(CELL_STROKE);
 
         CellData cellData = new CellData(rect);
         cells[row][col] = cellData;

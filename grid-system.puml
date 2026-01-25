@@ -1,0 +1,98 @@
+@startuml Grid System Architecture
+
+' Define classes
+class ScreenBuilder <<facade>> {
+  +{static} buildScene() : Scene
+  -{static} toHexString(Color) : String
+}
+
+class GridConstants <<utility>> {
+  +{static} GRID_SIZE : int = 10
+  +{static} CELL_SIZE : int = 60
+  +{static} DEFAULT_COLOR : Color
+  +{static} HOVER_COLOR : Color
+  +{static} CLICKED_COLOR : Color
+  +{static} DIRTY_COLOR : Color
+}
+
+class CellData {
+  -rectangle : Rectangle
+  -isColored : boolean
+  +CellData(Rectangle)
+  +getRectangle() : Rectangle
+  +isColored() : boolean
+  +setColored(boolean) : void
+  +setFill(Color) : void
+}
+
+class GridManager {
+  -cells : CellData[][]
+  -coloredCount : int
+  -listener : GridStateListener
+  +GridManager()
+  +setListener(GridStateListener) : void
+  +getColoredCount() : int
+  +buildGrid() : GridPane
+  -createCell(int, int) : StackPane
+  -handleCellClick(CellData) : void
+  -handleCellHover(CellData, boolean) : void
+  +resetGrid() : void
+  +dirtyCell(int, int) : void
+  +cleanCell(int, int) : void
+  -isValidPosition(int, int) : boolean
+  -notifyStateChanged() : void
+}
+
+interface GridStateListener {
+  +onStateChanged(int) : void
+}
+
+class ControlPanel {
+  -gridManager : GridManager
+  -counterLabel : Label
+  -rowInput : TextField
+  -colInput : TextField
+  +ControlPanel(GridManager)
+  +build() : VBox
+  -configureCounterLabel() : void
+  -createResetButton() : Button
+  -configureInputFields() : void
+  -createDirtyButton() : Button
+  -createCleanButton() : Button
+  -handleDirtyAction() : void
+  -handleCleanAction() : void
+  +updateCounter(int) : void
+}
+
+' Define relationships
+ScreenBuilder ..> GridManager : creates
+ScreenBuilder ..> ControlPanel : creates
+ScreenBuilder ..> GridConstants : uses
+
+GridManager "1" *-- "100" CellData : contains
+GridManager ..> GridConstants : uses
+GridManager ..> GridStateListener : notifies
+
+ControlPanel --> GridManager : manages
+ControlPanel ..|> GridStateListener : implements
+ControlPanel ..> GridConstants : uses
+
+CellData ..> GridConstants : uses
+
+' Add notes
+note right of ScreenBuilder
+  Entry point that 
+  coordinates all components
+end note
+
+note right of GridManager
+  Core logic: manages
+  grid state and all cells
+end note
+
+note right of ControlPanel
+  UI layer: handles
+  user interactions
+end note
+
+@enduml
