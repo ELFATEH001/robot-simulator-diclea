@@ -67,6 +67,11 @@ public class GridManager {
     }
 
     private void handleCellClick(CellData cellData) {
+        if (cellData.isColored()) {
+            cellData.setFill(CLICKED_COLOR);
+            coloredCount--;
+            notifyStateChanged();
+        } 
         if (!cellData.isColored()) {
             cellData.setFill(CLICKED_COLOR);
             cellData.setColored(true);
