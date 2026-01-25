@@ -11,7 +11,6 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
-
 /**
  * Manages all robots in the simulation with discrete cell-to-cell movement.
  */
@@ -24,7 +23,7 @@ public class RobotManager {
     
     // Movement control
     private long lastMoveTime = 0;
-    private static final long MOVE_DELAY_NANOS = 200_000_000; // 200ms between moves
+    private static final long MOVE_DELAY_NANOS = 1_000_000_000; // 200ms between moves
     
     public RobotManager(Pane robotLayer, GridManager gridManager) {
         this.robots = new ArrayList<>();
@@ -123,8 +122,10 @@ public class RobotManager {
      */
     private void updateRobots() {
         for (Robot robot : robots) {
-            // Clean the cell the robot is currently on
-            cleanCurrentCell(robot);
+            // Only clean if robot is not currently moving
+            if (!robot.isMoving()) {
+                cleanCurrentCell(robot);
+            }
         }
     }
     
@@ -133,6 +134,18 @@ public class RobotManager {
      */
     private void cleanCurrentCell(Robot robot) {
         gridManager.cleanCell(robot.getGridRowOneBased(), robot.getGridColOneBased());
+    }
+    
+    /**
+     * Move a specific robot to a grid position with cardinal animation (1-based)
+     */
+    public void moveRobotToPosition(Robot robot, int gridRow, int gridCol) {
+        if (gridRow < 1 || gridRow > GRID_SIZE || gridCol < 1 || gridCol > GRID_SIZE) {
+            System.out.println("Invalid target position!");
+            return;
+        }
+        
+        robot.moveToPosition(gridRow, gridCol);
     }
     
     /**
