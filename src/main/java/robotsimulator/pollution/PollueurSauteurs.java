@@ -1,10 +1,9 @@
 package robotsimulator.pollution;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 
 /**

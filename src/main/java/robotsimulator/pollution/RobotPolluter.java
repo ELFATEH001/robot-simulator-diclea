@@ -1,24 +1,23 @@
 package robotsimulator.pollution;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.Robot;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * Abstract base class for polluter robots
  */
 public abstract class RobotPolluter extends Robot {
-    protected GridManager gridManager;
     protected boolean missionComplete;
     
     public RobotPolluter(int gridRow, int gridCol, double radius, GridManager gridManager) {
         super(gridRow, gridCol, radius);
-        this.gridManager = gridManager;
+        // Remove this line: this.gridManager = gridManager;
+        // Instead, use the parent class's method
+        setGridManager(gridManager);
         this.missionComplete = false;
         setColor(Color.RED); // Polluters are red
     }
-    
     
     /**
      * Abstract method to execute one step of the mission

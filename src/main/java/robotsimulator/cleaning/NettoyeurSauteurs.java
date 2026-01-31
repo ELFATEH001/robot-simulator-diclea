@@ -1,10 +1,9 @@
 package robotsimulator.cleaning;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * A cleaner robot that jumps around the grid in a pattern, cleaning cells
@@ -16,6 +15,7 @@ public class NettoyeurSauteurs extends RobotCleaner {
     private int startCol;
     private int currentIndex;
     private int[][] visitPattern;
+    private int consecutiveWallHits;
     
     /**
      * Constructor with starting position and jump distance
@@ -26,6 +26,7 @@ public class NettoyeurSauteurs extends RobotCleaner {
         this.startRow = startRow;
         this.startCol = startCol;
         this.currentIndex = 0;
+        this.consecutiveWallHits = 0;
         setColor(Color.DEEPSKYBLUE);
         generateVisitPattern();
     }
@@ -92,10 +93,33 @@ public class NettoyeurSauteurs extends RobotCleaner {
             return true;
         }
         
-        // Move to next position in pattern
+        // Get target position from pattern
         int targetRow = visitPattern[currentIndex][0];
         int targetCol = visitPattern[currentIndex][1];
-        setGridPosition(targetRow, targetCol);
+        
+        // Check if target has wall
+        if (hasWallAtOneBased(targetRow, targetCol)) {
+            System.out.println("NettoyeurSauteurs: Wall at target (" + targetRow + ", " + targetCol + "), skipping...");
+            consecutiveWallHits++;
+            currentIndex++;
+            
+            if (consecutiveWallHits > 10) {
+                System.out.println("NettoyeurSauteurs: Too many wall hits, mission aborted!");
+                missionComplete = true;
+                return true;
+            }
+            return missionComplete;
+        }
+        
+        // Move to target position
+        boolean moved = setGridPositionWithWallCheck(targetRow, targetCol);
+        if (!moved) {
+            consecutiveWallHits++;
+            currentIndex++;
+            return missionComplete;
+        }
+        
+        consecutiveWallHits = 0;
         
         // Clean current cell
         cleanCurrentCell();
@@ -127,15 +151,8 @@ public class NettoyeurSauteurs extends RobotCleaner {
                          jumpDistance + ") from (" + startRow + ", " + startCol + ")");
     }
     
-    /**
-     * Clean the current cell
-     */
-    private void cleanCurrentCell() {
-        if (gridManager != null) {
-            gridManager.cleanCell(getGridRowOneBased(), getGridColOneBased());
-        }
-    }
-    
+
+  
     public int getJumpDistance() {
         return jumpDistance;
     }

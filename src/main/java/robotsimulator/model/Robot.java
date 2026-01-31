@@ -1,10 +1,5 @@
 package robotsimulator.model;
 
-import static robotsimulator.model.GridConstants.CELL_SIZE;
-import static robotsimulator.model.GridConstants.CELL_STROKE;
-import static robotsimulator.model.GridConstants.GRID_PADDING;
-import static robotsimulator.model.GridConstants.GRID_SIZE;
-
 import javafx.animation.AnimationTimer;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -12,6 +7,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
+import static robotsimulator.model.GridConstants.CELL_SIZE;
+import static robotsimulator.model.GridConstants.CELL_STROKE;
+import static robotsimulator.model.GridConstants.GRID_PADDING;
+import robotsimulator.ui.GridManager;
 
 /**
  * Represents a robot that moves discretely between grid cells.
@@ -40,6 +39,12 @@ public class Robot {
     private Color color;
     private Node visualNode;
     
+    protected  GridManager gridManager;
+
+    public void setGridManager(GridManager gridManager) {
+        this.gridManager = gridManager;
+    }
+
     // Constructor with grid position (1-based)
     public Robot(int gridRow, int gridCol, double radius) {
         // Convert to 0-based
@@ -86,21 +91,33 @@ public class Robot {
     private void performMoveStep() {
         // First move vertically (row), then horizontally (col)
         if (gridRow != targetRow) {
-            // Move towards target row
-            if (gridRow < targetRow) {
-                gridRow++;
-            } else {
-                gridRow--;
+            int nextRow = (gridRow < targetRow) ? gridRow + 1 : gridRow - 1;
+            
+            // Check for wall
+            if (gridManager != null && gridManager.isWallZeroBased(nextRow, gridCol)) {
+                System.out.println("Path blocked by wall! Stopping movement.");
+                isMoving.set(false);
+                moveTimer.stop();
+                return;
             }
+            
+            gridRow = nextRow;
             updateVisualPosition();
+            
         } else if (gridCol != targetCol) {
-            // Move towards target column
-            if (gridCol < targetCol) {
-                gridCol++;
-            } else {
-                gridCol--;
+            int nextCol = (gridCol < targetCol) ? gridCol + 1 : gridCol - 1;
+            
+            // Check for wall
+            if (gridManager != null && gridManager.isWallZeroBased(gridRow, nextCol)) {
+                System.out.println("Path blocked by wall! Stopping movement.");
+                isMoving.set(false);
+                moveTimer.stop();
+                return;
             }
+            
+            gridCol = nextCol;
             updateVisualPosition();
+            
         } else {
             // Reached target
             isMoving.set(false);
@@ -113,8 +130,17 @@ public class Robot {
      */
     public void moveToPosition(int targetGridRow, int targetGridCol) {
         // Convert from 1-based to 0-based
-        this.targetRow = targetGridRow - 1;
-        this.targetCol = targetGridCol - 1;
+        int newTargetRow = targetGridRow - 1;
+        int newTargetCol = targetGridCol - 1;
+        
+        // Check if target cell has a wall
+        if (gridManager != null && gridManager.isWallZeroBased(newTargetRow, newTargetCol)) {
+            System.out.println("Cannot move to wall cell!");
+            return;
+        }
+        
+        this.targetRow = newTargetRow;
+        this.targetCol = newTargetCol;
         
         // Don't start moving if already at target
         if (gridRow == targetRow && gridCol == targetCol) {
@@ -159,6 +185,11 @@ public class Robot {
      */
     public void moveUp() {
         if (gridRow > 0) {
+            // Check if the cell above is a wall
+            if (gridManager != null && gridManager.isWallZeroBased(gridRow - 1, gridCol)) {
+                System.out.println("Hit a wall! Cannot move up.");
+                return;
+            }
             gridRow--;
             updateVisualPosition();
         }
@@ -168,7 +199,11 @@ public class Robot {
      * Move down one cell
      */
     public void moveDown() {
-        if (gridRow < GRID_SIZE - 1) {
+        if (gridRow < GridConstants.GRID_SIZE - 1) {
+            if (gridManager != null && gridManager.isWallZeroBased(gridRow + 1, gridCol)) {
+                System.out.println("Hit a wall! Cannot move down.");
+                return;
+            }
             gridRow++;
             updateVisualPosition();
         }
@@ -179,6 +214,10 @@ public class Robot {
      */
     public void moveLeft() {
         if (gridCol > 0) {
+            if (gridManager != null && gridManager.isWallZeroBased(gridRow, gridCol - 1)) {
+                System.out.println("Hit a wall! Cannot move left.");
+                return;
+            }
             gridCol--;
             updateVisualPosition();
         }
@@ -188,7 +227,11 @@ public class Robot {
      * Move right one cell
      */
     public void moveRight() {
-        if (gridCol < GRID_SIZE - 1) {
+        if (gridCol < GridConstants.GRID_SIZE - 1) {
+            if (gridManager != null && gridManager.isWallZeroBased(gridRow, gridCol + 1)) {
+                System.out.println("Hit a wall! Cannot move right.");
+                return;
+            }
             gridCol++;
             updateVisualPosition();
         }
@@ -203,6 +246,43 @@ public class Robot {
         this.targetRow = this.gridRow;
         this.targetCol = this.gridCol;
         updateVisualPosition();
+    }
+
+    /**
+     * Set grid position with wall check (1-based indexing)
+     * Returns false if target position has a wall
+     */
+    public boolean setGridPositionWithWallCheck(int gridRow, int gridCol) {
+        // Convert from 1-based to 0-based
+        int newRow = gridRow - 1;
+        int newCol = gridCol - 1;
+        
+        // Check if target cell has a wall
+        if (gridManager != null && gridManager.isWallZeroBased(newRow, newCol)) {
+            System.out.println("Cannot teleport to wall cell at (" + gridRow + ", " + gridCol + ")");
+            return false;
+        }
+        
+        this.gridRow = newRow;
+        this.gridCol = newCol;
+        this.targetRow = this.gridRow;
+        this.targetCol = this.gridCol;
+        updateVisualPosition();
+        return true;
+    }
+
+    /**
+     * Check if a position has a wall (0-based)
+     */
+    protected boolean hasWallAt(int row, int col) {
+        return gridManager != null && gridManager.isWallZeroBased(row, col);
+    }
+    
+    /**
+     * Check if a position has a wall (1-based)
+     */
+    protected boolean hasWallAtOneBased(int row, int col) {
+        return hasWallAt(row - 1, col - 1);
     }
     
     /**
@@ -267,7 +347,7 @@ public class Robot {
         return color;
     }
     
-    public void setColor(Color color) {
+    public final  void setColor(Color color) {
         this.color = color;
     }
     

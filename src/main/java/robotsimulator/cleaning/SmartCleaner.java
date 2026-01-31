@@ -5,10 +5,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * Smart cleaner robot that uses pathfinding (A* algorithm) to find dirty cells
@@ -185,6 +184,10 @@ public class SmartCleaner extends RobotCleaner {
                 if (newRow >= 0 && newRow < GridConstants.GRID_SIZE && 
                     newCol >= 0 && newCol < GridConstants.GRID_SIZE) {
                     
+                    if (gridManager.isWallZeroBased(newRow, newCol)) {
+                        continue;
+                    }
+
                     // Skip if already processed
                     if (closedSet[newRow][newCol]) {
                         continue;

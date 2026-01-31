@@ -3,6 +3,10 @@ package robotsimulator.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.animation.AnimationTimer;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import robotsimulator.cleaning.NettoyeurComplet;
 import robotsimulator.cleaning.NettoyeurLibre;
 import robotsimulator.cleaning.NettoyeurSauteurs;
@@ -17,11 +21,6 @@ import robotsimulator.pollution.PollueurSauteurs;
 import robotsimulator.pollution.PollueurToutDroit;
 import robotsimulator.pollution.RobotPolluter;
 import robotsimulator.ui.GridManager;
-
-import javafx.animation.AnimationTimer;
-import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 
 /**
  * Manages all robots in the simulation with discrete cell-to-cell movement.
@@ -61,12 +60,20 @@ public class RobotManager {
      * Create a standard robot at the specified grid position (1-based indexing)
      */
     public Robot createRobot(int gridRow, int gridCol) {
-        if (gridRow < 1 || gridRow > GRID_SIZE || gridCol < 1 || gridCol > GRID_SIZE) {
-            System.out.println("Invalid robot position!");
+    if (gridRow < 1 || gridRow > GRID_SIZE || 
+        gridCol < 1 || gridCol > GRID_SIZE) {
+        System.out.println("Invalid robot position!");
+        return null;
+    }
+    
+    // Check if position is a wall
+    if (gridManager.isWall(gridRow, gridCol)) {
+            System.out.println("Cannot place robot on wall!");
             return null;
         }
         
         Robot robot = new Robot(gridRow, gridCol, CELL_SIZE / 3);
+        robot.setGridManager(gridManager); // Pass grid manager
         robots.add(robot);
         addVisualRepresentation(robot);
         

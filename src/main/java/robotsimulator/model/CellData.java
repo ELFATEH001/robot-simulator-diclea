@@ -9,6 +9,7 @@ import javafx.scene.shape.Rectangle;
 public class CellData {
     private final Rectangle rectangle;
     private boolean isColored;
+    private boolean isWall;
 
     public CellData(Rectangle rectangle) {
         this.rectangle = rectangle;
@@ -28,10 +29,28 @@ public class CellData {
     }
 
     public void setColored(boolean colored) {
-        isColored = colored;
+        // Don't allow coloring walls
+        if (!isWall) {
+            this.isColored = colored;
+        }
     }
 
     public void setFill(Color color) {
-        rectangle.setFill(color);
+        if (!isWall) {
+            rectangle.setFill(color);
+        }
+        
+    }
+
+    public void setWall(boolean wall) {
+        this.isWall = wall;
+        if (wall) {
+            rectangle.setFill(GridConstants.WALL_COLOR);
+            rectangle.setStroke(GridConstants.WALL_BORDER_COLOR);
+            rectangle.setStrokeWidth(2);
+        }
+    }
+    public boolean isWall() {
+        return isWall;
     }
 }

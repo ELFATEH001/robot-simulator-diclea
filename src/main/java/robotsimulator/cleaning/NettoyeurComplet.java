@@ -1,10 +1,9 @@
 package robotsimulator.cleaning;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * A cleaner robot that systematically cleans the entire grid
@@ -18,6 +17,7 @@ import javafx.scene.paint.Color;
 public class NettoyeurComplet extends RobotCleaner {
     private int currentRow;
     private int currentCol;
+    private int consecutiveWallHits;
     
     /**
      * Constructor - always starts at (1,1)
@@ -26,6 +26,7 @@ public class NettoyeurComplet extends RobotCleaner {
         super(1, 1, GridConstants.CELL_SIZE / 3, gridManager);
         this.currentRow = 1;
         this.currentCol = 1;
+        this.consecutiveWallHits = 0;
         setColor(Color.DODGERBLUE);
     }
     
@@ -35,44 +36,89 @@ public class NettoyeurComplet extends RobotCleaner {
             return true;
         }
         
-        // Move to current position
-        setGridPosition(currentRow, currentCol);
-        
-        // Clean current cell
-        cleanCurrentCell();
-        
-        // Determine direction based on row number (odd rows go left-to-right, even rows go right-to-left)
-        boolean isOddRow = (currentRow % 2 == 1);
-        
-        if (isOddRow) {
-            // Odd row: move left to right (1 -> GRID_SIZE)
-            currentCol++;
-            
-            // If we've reached the end of the row, move to next row
-            if (currentCol > GRID_SIZE) {
-                currentRow++;
-                currentCol = GRID_SIZE; // Start from right side for even row
+        // Move to current position with wall check
+        boolean moved = setGridPositionWithWallCheck(currentRow, currentCol);
+        if (!moved) {
+            // Hit a wall, skip this cell
+            consecutiveWallHits++;
+            if (consecutiveWallHits > 5) {
+                System.out.println("NettoyeurComplet: Too many consecutive wall hits, mission aborted!");
+                missionComplete = true;
+                return true;
             }
         } else {
-            // Even row: move right to left (GRID_SIZE -> 1)
-            currentCol--;
-            
-            // If we've reached the start of the row, move to next row
-            if (currentCol < 1) {
-                currentRow++;
-                currentCol = 1; // Start from left side for odd row
+            consecutiveWallHits = 0;
+            // Clean current cell
+            cleanCurrentCell();
+        }
+        
+        // Determine direction and calculate next position
+        boolean isOddRow = (currentRow % 2 == 1);
+        int nextRow = currentRow;
+        int nextCol = currentCol;
+        
+        if (isOddRow) {
+            // Odd row: move left to right
+            nextCol++;
+            if (nextCol > GRID_SIZE) {
+                nextRow++;
+                nextCol = GRID_SIZE; // Start from right side for even row
+            }
+        } else {
+            // Even row: move right to left
+            nextCol--;
+            if (nextCol < 1) {
+                nextRow++;
+                nextCol = 1; // Start from left side for odd row
             }
         }
         
-        // Check if we've cleaned all cells
+        // Check if next position has a wall, try alternative
+        if (hasWallAtOneBased(nextRow, nextCol)) {
+            System.out.println("NettoyeurComplet: Wall at (" + nextRow + ", " + nextCol + "), trying alternative...");
+            // Try to find alternative path
+            int[] alternative = findAlternativePosition(currentRow, currentCol, nextRow, nextCol);
+            nextRow = alternative[0];
+            nextCol = alternative[1];
+        }
+        
+        // Update position
+        currentRow = nextRow;
+        currentCol = nextCol;
+        
+        // Check if we've processed all cells
         if (currentRow > GRID_SIZE) {
             missionComplete = true;
-            System.out.println("NettoyeurComplet finished cleaning entire grid in zigzag pattern!");
+            System.out.println("NettoyeurComplet finished cleaning accessible cells!");
         }
         
         return missionComplete;
     }
-    
+
+    private int[] findAlternativePosition(int currentRow, int currentCol, int targetRow, int targetCol) {
+        // Try moving to adjacent non-wall cells        
+        int[][] directions = {
+            {0, 1},   // right
+            {1, 0},   // down  
+            {0, -1},  // left
+            {-1, 0}   // up
+        };
+        
+        for (int[] dir : directions) {
+            int newRow = currentRow + dir[0];
+            int newCol = currentCol + dir[1];
+            
+            if (newRow >= 1 && newRow <= GRID_SIZE && 
+                newCol >= 1 && newCol <= GRID_SIZE &&
+                !hasWallAtOneBased(newRow, newCol)) {
+                return new int[]{newRow, newCol};
+            }
+        }
+        
+        // If no alternative, continue original path
+        return new int[]{targetRow, targetCol};
+    }
+
     @Override
     public void resetMission() {
         missionComplete = false;
@@ -84,14 +130,7 @@ public class NettoyeurComplet extends RobotCleaner {
                          GRID_SIZE + "," + GRID_SIZE + ")");
     }
     
-    /**
-     * Clean the current cell
-     */
-    private void cleanCurrentCell() {
-        if (gridManager != null) {
-            gridManager.cleanCell(getGridRowOneBased(), getGridColOneBased());
-        }
-    }
+
     
     /**
      * Get progress percentage

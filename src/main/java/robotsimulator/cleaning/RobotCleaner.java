@@ -1,24 +1,52 @@
 package robotsimulator.cleaning;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.Robot;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * Abstract base class for cleaner robots
  */
 public abstract class RobotCleaner extends Robot {
-    protected GridManager gridManager;
     protected boolean missionComplete;
-    
+    protected int wallHitCount;
+
     public RobotCleaner(int gridRow, int gridCol, double radius, GridManager gridManager) {
         super(gridRow, gridCol, radius);
-        this.gridManager = gridManager;
+        // Remove this line: this.gridManager = gridManager;
+        // Instead, use the parent class's method
+        setGridManager(gridManager);
         this.missionComplete = false;
+        this.wallHitCount = 0;
         setColor(Color.BLUE); // Cleaners are blue
     }
-    
+    /**
+     * Check if too many walls were hit
+     */
+    protected boolean isMissionBlocked() {
+        return wallHitCount > 10; // Adjust threshold as needed
+    }
+
+    /**
+     * Record a wall hit
+     */
+    protected void recordWallHit() {
+        wallHitCount++;
+        System.out.println(getClass().getSimpleName() + ": Wall hit #" + wallHitCount);
+    }
+
+    protected void resetWallHits() {
+        wallHitCount = 0;
+    }
+
+    /**
+     * Clean the current cell
+     */
+    protected void cleanCurrentCell() {
+        if (gridManager != null) {
+            gridManager.cleanCell(getGridRowOneBased(), getGridColOneBased());
+        }
+    }
     
     /**
      * Abstract method to execute one step of the mission
@@ -29,11 +57,6 @@ public abstract class RobotCleaner extends Robot {
      * Reset the mission so it can be executed again
      */
     public abstract void resetMission();
-    
-    /**
-     * Pollute the current cell
-     */
-    
     
     /**
      * Check if mission is complete

@@ -1,10 +1,9 @@
 package robotsimulator.cleaning;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * A cleaner robot that goes straight down a column, cleaning each cell
@@ -12,7 +11,9 @@ import javafx.scene.paint.Color;
 public class NettoyeurToutDroit extends RobotCleaner {
     private int startCol;
     private int startRow;
-    private int currentRow; // Track which row we've cleaned
+    private int currentRow; 
+    private boolean wallHit;
+    private int cellsCleaned;
     
     /**
      * Constructor with starting column
@@ -21,7 +22,9 @@ public class NettoyeurToutDroit extends RobotCleaner {
         super(1, startCol, GridConstants.CELL_SIZE / 3, gridManager);
         this.startCol = Math.max(1, Math.min(startCol, GRID_SIZE));
         this.startRow = 1;
-        this.currentRow = 0; // Haven't started yet
+        this.currentRow = 1; // Start at row 1
+        this.wallHit = false;
+        this.cellsCleaned = 0;
         setColor(Color.LIGHTBLUE);
     }
     
@@ -35,25 +38,44 @@ public class NettoyeurToutDroit extends RobotCleaner {
     
     @Override
     public boolean executeMissionStep(int stepCount) {
-        if (missionComplete) {
+        // If mission already complete or wall was hit, return true
+        if (missionComplete || wallHit) {
             return true;
         }
         
-        // Increment to next row
-        currentRow++;
-        
+        // Check if we've already processed all rows
         if (currentRow > GRID_SIZE) {
             missionComplete = true;
+            System.out.println("NettoyeurToutDroit: Completed cleaning column " + startCol + 
+                             ", cleaned " + cellsCleaned + " cells");
             return true;
         }
         
-        // Move to current row and clean
-        setGridPosition(currentRow, startCol);
-        cleanCurrentCell();
+        // Check if current position has wall
+        if (hasWallAtOneBased(currentRow, startCol)) {
+            System.out.println("NettoyeurToutDroit: Hit wall at (" + currentRow + ", " + startCol + ") - Mission ABORTED!");
+            wallHit = true;
+            missionComplete = true; // Mission fails when hitting a wall
+            return true;
+        }
         
-        // Check if we've reached the last row
-        if (currentRow >= GRID_SIZE) {
+        // Move to current row
+        setGridPositionWithWallCheck(currentRow, startCol);
+        
+        // Clean current cell
+        cleanCurrentCell();
+        cellsCleaned++;
+        
+        System.out.println("NettoyeurToutDroit: Cleaned (" + currentRow + ", " + startCol + ")");
+        
+        // Move to next row
+        currentRow++;
+        
+        // Check if we've reached beyond the last row
+        if (currentRow > GRID_SIZE) {
             missionComplete = true;
+            System.out.println("NettoyeurToutDroit: Successfully finished column " + startCol + 
+                             ", cleaned " + cellsCleaned + "/" + GRID_SIZE + " cells");
         }
         
         return missionComplete;
@@ -62,25 +84,43 @@ public class NettoyeurToutDroit extends RobotCleaner {
     @Override
     public void resetMission() {
         missionComplete = false;
+        wallHit = false;
+        cellsCleaned = 0;
         
         // Update starting position based on current position
         startRow = getGridRowOneBased();
         startCol = getGridColOneBased();
-        currentRow = startRow - 1; // Will be incremented to startRow on first step
+        currentRow = startRow; // Start from current row
         
-        System.out.println("NettoyeurToutDroit mission reset - will clean down from (" + startRow + ", " + startCol + ") to (" + GRID_SIZE + ", " + startCol + ")");
+        System.out.println("NettoyeurToutDroit mission reset - will clean down from (" + 
+                         startRow + ", " + startCol + ")");
     }
     
-    /**
-     * Clean the current cell
-     */
-    private void cleanCurrentCell() {
-        if (gridManager != null) {
-            gridManager.cleanCell(getGridRowOneBased(), getGridColOneBased());
+    @Override
+    public String toString() {
+        if (wallHit) {
+            return "NettoyeurToutDroit [col=" + startCol + ", FAILED - Hit wall at row " + currentRow + "]";
+        } else if (missionComplete) {
+            return "NettoyeurToutDroit [col=" + startCol + ", SUCCESS - cleaned " + cellsCleaned + "/" + GRID_SIZE + " cells]";
+        } else {
+            return "NettoyeurToutDroit [col=" + startCol + ", row=" + currentRow + 
+                   ", cleaned=" + cellsCleaned + "/" + GRID_SIZE + "]";
         }
     }
     
     public int getStartCol() {
         return startCol;
+    }
+    
+    public int getCellsCleaned() {
+        return cellsCleaned;
+    }
+    
+    public double getProgress() {
+        return (double) cellsCleaned / GRID_SIZE * 100.0;
+    }
+    
+    public boolean hitWall() {
+        return wallHit;
     }
 }

@@ -1,5 +1,11 @@
 package robotsimulator.ui;
 
+import java.util.Random;
+
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import robotsimulator.model.CellData;
 import static robotsimulator.model.GridConstants.CELL_SIZE;
 import static robotsimulator.model.GridConstants.CELL_STROKE;
@@ -9,11 +15,9 @@ import static robotsimulator.model.GridConstants.DIRTY_COLOR;
 import static robotsimulator.model.GridConstants.GRID_PADDING;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import static robotsimulator.model.GridConstants.HOVER_COLOR;
-
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import static robotsimulator.model.GridConstants.MAX_WALL_LENGTH;
+import static robotsimulator.model.GridConstants.MIN_WALL_LENGTH;
+import static robotsimulator.model.GridConstants.NUM_WALLS;
 
 /**
  * Manages the grid state and operations.
@@ -22,10 +26,94 @@ public class GridManager {
     private final CellData[][] cells;
     private int coloredCount;
     private GridStateListener listener;
-
+    private final Random random = new Random();
+    private boolean wallsGenerated = false;
+    
     public GridManager() {
         this.cells = new CellData[GRID_SIZE][GRID_SIZE];
         this.coloredCount = 0;
+    }
+
+    public void generateInitialWalls() {
+        if (wallsGenerated) {
+            return; // Walls already generated
+        }
+        
+        System.out.println("Generating initial walls...");
+        
+        // Generate specified number of walls
+        for (int i = 0; i < NUM_WALLS; i++) {
+            generateRandomWall();
+        }
+        
+        wallsGenerated = true;
+        System.out.println("Walls generated successfully.");
+    }
+
+    private void generateRandomWall() {
+        boolean horizontal = random.nextBoolean();
+        int wallLength = MIN_WALL_LENGTH + 
+                        random.nextInt(MAX_WALL_LENGTH - MIN_WALL_LENGTH + 1);
+        
+        int attempts = 0;
+        boolean placed = false;
+        
+        // Try to place wall (max 10 attempts)
+        while (!placed && attempts < 10) {
+            if (horizontal) {
+                placed = tryPlaceHorizontalWall(wallLength);
+            } else {
+                placed = tryPlaceVerticalWall(wallLength);
+            }
+            attempts++;
+        }
+    }
+
+    private boolean tryPlaceHorizontalWall(int length) {
+        int startRow = random.nextInt(GRID_SIZE);
+        int startCol = random.nextInt(GRID_SIZE - length + 1);
+        
+        // Check if all cells are available (not walls and not at edges)
+        for (int col = startCol; col < startCol + length; col++) {
+            if (cells[startRow][col] != null && cells[startRow][col].isWall()) {
+                return false; // Cell already has a wall
+            }
+        }
+        
+        // Place the wall
+        for (int col = startCol; col < startCol + length; col++) {
+            if (cells[startRow][col] == null) {
+                // Cell not initialized yet, mark for later
+                // We'll handle this in createCell
+            } else {
+                cells[startRow][col].setWall(true);
+            }
+        }
+        
+        return true;
+    }
+    
+    private boolean tryPlaceVerticalWall(int length) {
+        int startRow = random.nextInt(GRID_SIZE - length + 1);
+        int startCol = random.nextInt(GRID_SIZE);
+        
+        // Check if all cells are available
+        for (int row = startRow; row < startRow + length; row++) {
+            if (cells[row][startCol] != null && cells[row][startCol].isWall()) {
+                return false;
+            }
+        }
+        
+        // Place the wall
+        for (int row = startRow; row < startRow + length; row++) {
+            if (cells[row][startCol] == null) {
+                // Cell not initialized yet
+            } else {
+                cells[row][startCol].setWall(true);
+            }
+        }
+        
+        return true;
     }
 
     public void setListener(GridStateListener listener) {
@@ -39,13 +127,18 @@ public class GridManager {
     public GridPane buildGrid() {
         GridPane gridPane = new GridPane();
         gridPane.setStyle("-fx-padding: " + GRID_PADDING + ";");
+        
+        // First create all cells
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int col = 0; col < GRID_SIZE; col++) {
                 StackPane cell = createCell(row, col);
                 gridPane.add(cell, col, row);
             }
         }
-
+        
+        // Now generate walls (after all cells are created)
+        generateInitialWalls();
+        
         return gridPane;
     }
 
@@ -55,18 +148,40 @@ public class GridManager {
         rect.setStroke(Color.GRAY);
         rect.setStrokeWidth(CELL_STROKE);
 
+            
+        // Initialize as regular cell
         CellData cellData = new CellData(rect);
         cells[row][col] = cellData;
-
+        
         StackPane cell = new StackPane(rect);
-
+        
         cell.setOnMouseClicked(e -> handleCellClick(cellData));
         cell.setOnMouseEntered(e -> handleCellHover(cellData, true));
         cell.setOnMouseExited(e -> handleCellHover(cellData, false));
-
+        
         return cell;
     }
 
+    public boolean isWall(int row, int col) {
+        row--;
+        col--;
+        if (!isValidPosition(row, col)) {
+            return false;
+        }
+        return cells[row][col].isWall();
+    }
+
+    // Check if a cell has a wall (0-based)
+    public boolean isWallZeroBased(int row, int col) {
+        if (!isValidPosition(row, col)) {
+            return false;
+        }
+        return cells[row][col].isWall();
+    }
+    
+    
+
+    
     private void handleCellClick(CellData cellData) {
         if (cellData.isColored()) {
             cellData.setFill(CLICKED_COLOR);
@@ -103,11 +218,15 @@ public class GridManager {
         notifyStateChanged();
     }
 
+    // dirty a cell
     public void dirtyCell(int row, int col) {
         row--;
         col--;
-        if (!isValidPosition(row, col)) return;
-
+        if (!isValidPosition(row, col) || cells[row][col].isWall()) {
+            System.out.println("Cannot dirty wall cell!");
+            return;
+        }
+        
         CellData cellData = cells[row][col];
         cellData.setFill(DIRTY_COLOR);
         if (!cellData.isColored()) {
@@ -120,8 +239,11 @@ public class GridManager {
     public void cleanCell(int row, int col) {
         row--;
         col--;
-        if (!isValidPosition(row, col)) return;
-
+        if (!isValidPosition(row, col) || cells[row][col].isWall()) {
+            System.out.println("Cannot clean wall cell!");
+            return;
+        }
+        
         CellData cellData = cells[row][col];
         if (cellData.isColored()) {
             cellData.setFill(DEFAULT_COLOR);
@@ -204,7 +326,7 @@ public class GridManager {
             listener.onStateChanged(coloredCount);
         }
     }
-
+    
     public interface GridStateListener {
         void onStateChanged(int coloredCount);
     }

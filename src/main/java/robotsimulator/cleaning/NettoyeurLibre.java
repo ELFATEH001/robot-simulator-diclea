@@ -1,12 +1,13 @@
 package robotsimulator.cleaning;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
+import javafx.scene.paint.Color;
 import robotsimulator.model.GridConstants;
 import static robotsimulator.model.GridConstants.GRID_SIZE;
 import robotsimulator.ui.GridManager;
-
-import javafx.scene.paint.Color;
 
 /**
  * A cleaner robot that moves randomly around the grid, cleaning cells
@@ -15,6 +16,7 @@ public class NettoyeurLibre extends RobotCleaner {
     private Random random;
     private int stepsTaken;
     private int maxSteps;
+    // private int consecutiveWallHits;
     
     /**
      * Constructor with starting position and maximum steps
@@ -62,28 +64,40 @@ public class NettoyeurLibre extends RobotCleaner {
             return true;
         }
         
-        // Move randomly to adjacent cell
+        // Try to move to a random non-wall adjacent cell
         int currentRow = getGridRowOneBased();
         int currentCol = getGridColOneBased();
         
-        // Choose random direction (0=up, 1=right, 2=down, 3=left)
-        int direction = random.nextInt(4);
-        int newRow = currentRow;
-        int newCol = currentCol;
+        // Generate a list of possible moves
+        List<int[]> possibleMoves = new ArrayList<>();
+        int[][] directions = {
+            {-1, 0},  // up
+            {1, 0},   // down
+            {0, -1},  // left
+            {0, 1}    // right
+        };
         
-        switch (direction) {
-            case 0 -> // Up
-                newRow = Math.max(1, currentRow - 1);
-            case 1 -> // Right
-                newCol = Math.min(GRID_SIZE, currentCol + 1);
-            case 2 -> // Down
-                newRow = Math.min(GRID_SIZE, currentRow + 1);
-            case 3 -> // Left
-                newCol = Math.max(1, currentCol - 1);
+        for (int[] dir : directions) {
+            int newRow = currentRow + dir[0];
+            int newCol = currentCol + dir[1];
+            
+            if (newRow >= 1 && newRow <= GRID_SIZE && 
+                newCol >= 1 && newCol <= GRID_SIZE &&
+                !hasWallAtOneBased(newRow, newCol)) {
+                possibleMoves.add(new int[]{newRow, newCol});
+            }
         }
         
-        // Move to new position
-        setGridPosition(newRow, newCol);
+        // If no moves possible (surrounded by walls), mission fails
+        if (possibleMoves.isEmpty()) {
+            System.out.println("NettoyeurLibre: Surrounded by walls, mission aborted!");
+            missionComplete = true;
+            return true;
+        }
+        
+        // Choose random valid move
+        int[] move = possibleMoves.get(random.nextInt(possibleMoves.size()));
+        setGridPositionWithWallCheck(move[0], move[1]);
         
         return missionComplete;
     }
@@ -97,14 +111,7 @@ public class NettoyeurLibre extends RobotCleaner {
                          getGridRowOneBased() + ", " + getGridColOneBased() + ")");
     }
     
-    /**
-     * Clean the current cell
-     */
-    private void cleanCurrentCell() {
-        if (gridManager != null) {
-            gridManager.cleanCell(getGridRowOneBased(), getGridColOneBased());
-        }
-    }
+
     
     public int getStepsTaken() {
         return stepsTaken;
