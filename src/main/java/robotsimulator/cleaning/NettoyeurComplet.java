@@ -17,7 +17,7 @@ import robotsimulator.ui.GridManager;
 public class NettoyeurComplet extends RobotCleaner {
     private int currentRow;
     private int currentCol;
-    private int consecutiveWallHits;
+    private boolean hitWall;
     
     /**
      * Constructor - always starts at (1,1)
@@ -26,31 +26,29 @@ public class NettoyeurComplet extends RobotCleaner {
         super(1, 1, GridConstants.CELL_SIZE / 3, gridManager);
         this.currentRow = 1;
         this.currentCol = 1;
-        this.consecutiveWallHits = 0;
+        this.hitWall = false;
         setColor(Color.DODGERBLUE);
     }
     
     @Override
     public boolean executeMissionStep(int stepCount) {
-        if (missionComplete) {
+        if (missionComplete || hitWall) {
             return true;
         }
         
-        // Move to current position with wall check
-        boolean moved = setGridPositionWithWallCheck(currentRow, currentCol);
-        if (!moved) {
-            // Hit a wall, skip this cell
-            consecutiveWallHits++;
-            if (consecutiveWallHits > 5) {
-                System.out.println("NettoyeurComplet: Too many consecutive wall hits, mission aborted!");
-                missionComplete = true;
-                return true;
-            }
-        } else {
-            consecutiveWallHits = 0;
-            // Clean current cell
-            cleanCurrentCell();
+        // Check if current position has a wall
+        if (hasWallAtOneBased(currentRow, currentCol)) {
+            System.out.println("NettoyeurComplet: Hit a wall at (" + currentRow + ", " + currentCol + "). Mission stopped!");
+            hitWall = true;
+            missionComplete = true;
+            return true;
         }
+        
+        // Move to current position
+        setGridPosition(currentRow, currentCol);
+        
+        // Clean current cell
+        cleanCurrentCell();
         
         // Determine direction and calculate next position
         boolean isOddRow = (currentRow % 2 == 1);
@@ -73,15 +71,6 @@ public class NettoyeurComplet extends RobotCleaner {
             }
         }
         
-        // Check if next position has a wall, try alternative
-        if (hasWallAtOneBased(nextRow, nextCol)) {
-            System.out.println("NettoyeurComplet: Wall at (" + nextRow + ", " + nextCol + "), trying alternative...");
-            // Try to find alternative path
-            int[] alternative = findAlternativePosition(currentRow, currentCol, nextRow, nextCol);
-            nextRow = alternative[0];
-            nextCol = alternative[1];
-        }
-        
         // Update position
         currentRow = nextRow;
         currentCol = nextCol;
@@ -95,33 +84,10 @@ public class NettoyeurComplet extends RobotCleaner {
         return missionComplete;
     }
 
-    private int[] findAlternativePosition(int currentRow, int currentCol, int targetRow, int targetCol) {
-        // Try moving to adjacent non-wall cells        
-        int[][] directions = {
-            {0, 1},   // right
-            {1, 0},   // down  
-            {0, -1},  // left
-            {-1, 0}   // up
-        };
-        
-        for (int[] dir : directions) {
-            int newRow = currentRow + dir[0];
-            int newCol = currentCol + dir[1];
-            
-            if (newRow >= 1 && newRow <= GRID_SIZE && 
-                newCol >= 1 && newCol <= GRID_SIZE &&
-                !hasWallAtOneBased(newRow, newCol)) {
-                return new int[]{newRow, newCol};
-            }
-        }
-        
-        // If no alternative, continue original path
-        return new int[]{targetRow, targetCol};
-    }
-
     @Override
     public void resetMission() {
         missionComplete = false;
+        hitWall = false;
         currentRow = 1;
         currentCol = 1;
         setGridPosition(1, 1);
@@ -129,8 +95,6 @@ public class NettoyeurComplet extends RobotCleaner {
         System.out.println("NettoyeurComplet mission reset - will clean entire grid from (1,1) to (" + 
                          GRID_SIZE + "," + GRID_SIZE + ")");
     }
-    
-
     
     /**
      * Get progress percentage
@@ -150,8 +114,18 @@ public class NettoyeurComplet extends RobotCleaner {
         return totalCells - cleanedCells;
     }
     
+    /**
+     * Check if the robot has hit a wall
+     */
+    public boolean hasHitWall() {
+        return hitWall;
+    }
+    
     @Override
     public String toString() {
+        if (hitWall) {
+            return "NettoyeurComplet stopped - hit a wall at (" + currentRow + "," + currentCol + ")";
+        }
         return "NettoyeurComplet at (" + currentRow + "," + currentCol + ") - " + 
                String.format("%.1f%%", getProgress()) + " complete";
     }

@@ -1,0 +1,190 @@
+@startuml RobotClassDiagram
+
+skinparam class {
+    BackgroundColor<<Interface>> LightYellow
+    BackgroundColor<<Abstract>> LightBlue
+    ArrowColor #444444
+    BorderColor #333333
+}
+
+package "model" {
+    class Robot <<Abstract>> {
+        -position: Point
+        -direction: Direction
+        +move(): void
+        +turn(): void
+        +getPosition(): Point
+        +setPosition(Point): void
+    }
+    
+    class CellData {
+        -isClean: boolean
+        -pollutionLevel: int
+        +isClean(): boolean
+        +setClean(boolean): void
+        +getPollutionLevel(): int
+        +setPollutionLevel(int): void
+    }
+    
+    class GridConstants {
+        {static} -GRID_WIDTH: int
+        {static} -GRID_HEIGHT: int
+        {static} +getGridWidth(): int
+        {static} +getGridHeight(): int
+    }
+}
+
+package "cleaning" {
+    interface ICleaner <<Interface>> {
+        +clean(CellData): void
+        +getCleaningPower(): int
+    }
+    
+    abstract class RobotCleaner extends Robot implements ICleaner {
+        -cleaningPower: int
+        +clean(CellData): void
+        +getCleaningPower(): int
+    }
+    
+    class NettoyeurComplet extends RobotCleaner {
+        -coverageStrategy: String
+        +move(): void
+        +clean(CellData): void
+    }
+    
+    class NettoyeurLibre extends RobotCleaner {
+        -randomGenerator: Random
+        +move(): void
+        +clean(CellData): void
+    }
+    
+    class NettoyeurSauteurs extends RobotCleaner {
+        -jumpDistance: int
+        +move(): void
+        +clean(CellData): void
+    }
+    
+    class NettoyeurToutDroit extends RobotCleaner {
+        -directionFixed: boolean
+        +move(): void
+        +clean(CellData): void
+    }
+    
+    class SmartCleaner extends RobotCleaner {
+        -optimizationLevel: int
+        -memory: Map<Point, Boolean>
+        +move(): void
+        +clean(CellData): void
+        +optimizePath(): void
+    }
+}
+
+package "pollution" {
+    interface IPolluter <<Interface>> {
+        +pollute(CellData): void
+        +getPollutionLevel(): int
+    }
+    
+    abstract class RobotPolluter extends Robot implements IPolluter {
+        -pollutionLevel: int
+        +pollute(CellData): void
+        +getPollutionLevel(): int
+    }
+    
+    class PollueurLibre extends RobotPolluter {
+        -randomGenerator: Random
+        +move(): void
+        +pollute(CellData): void
+    }
+    
+    class PollueurSauteurs extends RobotPolluter {
+        -jumpDistance: int
+        +move(): void
+        +pollute(CellData): void
+    }
+    
+    class PollueurToutDroit extends RobotPolluter {
+        -directionFixed: boolean
+        +move(): void
+        +pollute(CellData): void
+    }
+}
+
+package "ui" {
+    class GridManager {
+        -grid: CellData[][]
+        -width: int
+        -height: int
+        +updateGrid(): void
+        +render(): void
+        +getCell(int, int): CellData
+        +setCell(int, int, CellData): void
+    }
+    
+    class ControlPanel {
+        -isActive: boolean
+        -simulationSpeed: int
+        +handleInput(Event): void
+        +displayStatus(): void
+        +setSimulationSpeed(int): void
+    }
+    
+    class ScreenBuilder {
+        -components: List<Node>
+        +buildScreen(): Pane
+        +initializeComponents(): void
+        +addComponent(Node): void
+    }
+    
+    class RobotVisualFactory {
+        -visualMap: Map<Robot, Node>
+        +createVisual(Robot): Node
+        +updateVisual(Robot): void
+        +removeVisual(Robot): void
+    }
+}
+
+package "core" {
+    class RobotManager {
+        -robots: List<Robot>
+        -isRunning: boolean
+        -simulationThread: Thread
+        +manageRobots(): void
+        +startSimulation(): void
+        +stopSimulation(): void
+        +addRobot(Robot): void
+        +removeRobot(Robot): void
+    }
+    
+    class Main {
+        -primaryStage: Stage
+        +main(String[]): void
+        +start(Stage): void
+    }
+}
+
+' Relations principales
+RobotManager "1" *-- "0..*" Robot : manages
+GridManager "1" *-- "*" CellData : contains
+ScreenBuilder "1" *-- "*" ControlPanel : includes
+RobotVisualFactory "1" *-- "*" Robot : visualizes
+
+' Relations d'héritage (déjà définies dans les packages)
+' Relations d'interface
+RobotCleaner ..|> ICleaner
+RobotPolluter ..|> IPolluter
+
+' Relations d'utilisation
+RobotManager --> GridManager : updates
+RobotManager --> RobotVisualFactory : requests visuals
+ControlPanel --> RobotManager : controls
+Main --> RobotManager : creates
+Main --> ScreenBuilder : initializes
+GridManager --> Robot : displays
+
+' Notes explicatives
+note top of Robot : Classe abstraite de base\npour tous les robots
+note right of ICleaner : Interface commune\npour les comportements de nettoyage
+note left of IPolluter : Interface commune\npour les comportements de pollution
+
+@enduml

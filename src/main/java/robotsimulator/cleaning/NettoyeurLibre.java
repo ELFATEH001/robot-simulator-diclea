@@ -16,7 +16,7 @@ public class NettoyeurLibre extends RobotCleaner {
     private Random random;
     private int stepsTaken;
     private int maxSteps;
-    // private int consecutiveWallHits;
+    
     
     /**
      * Constructor with starting position and maximum steps
