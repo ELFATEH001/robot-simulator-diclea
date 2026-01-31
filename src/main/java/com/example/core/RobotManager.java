@@ -3,6 +3,11 @@ package com.example.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.cleaning.NettoyeurComplet;
+import com.example.cleaning.NettoyeurLibre;
+import com.example.cleaning.NettoyeurSauteurs;
+import com.example.cleaning.NettoyeurToutDroit;
+import com.example.cleaning.RobotCleaner;
 import static com.example.model.GridConstants.CELL_SIZE;
 import static com.example.model.GridConstants.GRID_SIZE;
 import com.example.model.Robot;
@@ -23,26 +28,32 @@ import javafx.scene.shape.Circle;
 public class RobotManager {
     private final List<Robot> robots;
     private final List<RobotPolluter> polluters;
+    private final List<RobotCleaner> cleaners;
     private final Pane robotLayer;
     private final GridManager gridManager;
     private AnimationTimer gameLoop;
     private AnimationTimer polluterMissionTimer;
+    private AnimationTimer cleanerMissionTimer;
     private boolean isRunning;
     private boolean missionsRunning;
+    private boolean cleaningMissionsRunning;
     
     // Movement control
     private long lastMoveTime = 0;
     private long lastMissionTime = 0;
+    private long lastCleaningMissionTime = 0;
     private static final long MOVE_DELAY_NANOS = 200_000_000; // 200ms between moves
     private static final long MISSION_STEP_DELAY_NANOS = 500_000_000; // 500ms between mission steps
     
     public RobotManager(Pane robotLayer, GridManager gridManager) {
         this.robots = new ArrayList<>();
         this.polluters = new ArrayList<>();
+        this.cleaners = new ArrayList<>();
         this.robotLayer = robotLayer;
         this.gridManager = gridManager;
         this.isRunning = false;
         this.missionsRunning = false;
+        this.cleaningMissionsRunning = false;
     }
     
     /**
@@ -98,6 +109,54 @@ public class RobotManager {
     }
     
     /**
+     * Create a straight line cleaner
+     */
+    public NettoyeurToutDroit createStraightCleaner(int startCol) {
+        NettoyeurToutDroit cleaner = new NettoyeurToutDroit(startCol, gridManager);
+        robots.add(cleaner);
+        cleaners.add(cleaner);
+        addVisualRepresentation(cleaner);
+        
+        return cleaner;
+    }
+    
+    /**
+     * Create a jumping cleaner
+     */
+    public NettoyeurSauteurs createJumpingCleaner(int row, int col, int jumpSize) {
+        NettoyeurSauteurs cleaner = new NettoyeurSauteurs(row, col, jumpSize, gridManager);
+        robots.add(cleaner);
+        cleaners.add(cleaner);
+        addVisualRepresentation(cleaner);
+        
+        return cleaner;
+    }
+    
+    /**
+     * Create a free movement cleaner
+     */
+    public NettoyeurLibre createFreeCleaner(int row, int col, int maxCleaningSteps) {
+        NettoyeurLibre cleaner = new NettoyeurLibre(row, col, maxCleaningSteps, gridManager);
+        robots.add(cleaner);
+        cleaners.add(cleaner);
+        addVisualRepresentation(cleaner);
+        
+        return cleaner;
+    }
+    
+    /**
+     * Create a complete grid cleaner
+     */
+    public NettoyeurComplet createCompleteCleaner() {
+        NettoyeurComplet cleaner = new NettoyeurComplet(gridManager);
+        robots.add(cleaner);
+        cleaners.add(cleaner);
+        addVisualRepresentation(cleaner);
+        
+        return cleaner;
+    }
+    
+    /**
      * Add visual representation for a robot
      */
     private void addVisualRepresentation(Robot robot) {
@@ -143,6 +202,34 @@ public class RobotManager {
     }
     
     /**
+     * Start cleaner missions
+     */
+    public void startAllCleaners() {
+        if (cleaningMissionsRunning) return;
+        
+        cleaningMissionsRunning = true;
+        lastCleaningMissionTime = System.nanoTime();
+        
+        cleanerMissionTimer = new AnimationTimer() {
+            private int stepCount = 0;
+            
+            @Override
+            public void handle(long now) {
+                if (now - lastCleaningMissionTime >= MISSION_STEP_DELAY_NANOS) {
+                    boolean allComplete = executeCleaningMissionStep(stepCount);
+                    stepCount++;
+                    lastCleaningMissionTime = now;
+                    
+                    if (allComplete) {
+                        stopAllCleaners();
+                    }
+                }
+            }
+        };
+        cleanerMissionTimer.start();
+    }
+    
+    /**
      * Execute one step of all polluter missions
      */
     private boolean executeMissionStep(int stepCount) {
@@ -150,10 +237,28 @@ public class RobotManager {
         
         for (RobotPolluter polluter : polluters) {
             if (!polluter.isMissionComplete()) {
-                // This will call the appropriate implementation for each polluter type
                 polluter.executeMissionStep(stepCount);
                 
                 if (!polluter.isMissionComplete()) {
+                    allComplete = false;
+                }
+            }
+        }
+        
+        return allComplete;
+    }
+    
+    /**
+     * Execute one step of all cleaner missions
+     */
+    private boolean executeCleaningMissionStep(int stepCount) {
+        boolean allComplete = true;
+        
+        for (RobotCleaner cleaner : cleaners) {
+            if (!cleaner.isMissionComplete()) {
+                cleaner.executeMissionStep(stepCount);
+                
+                if (!cleaner.isMissionComplete()) {
                     allComplete = false;
                 }
             }
@@ -173,10 +278,34 @@ public class RobotManager {
     }
     
     /**
+     * Stop cleaner missions
+     */
+    public void stopAllCleaners() {
+        if (cleanerMissionTimer != null) {
+            cleanerMissionTimer.stop();
+            cleaningMissionsRunning = false;
+        }
+    }
+    
+    /**
+     * Stop all missions and cleaners
+     */
+    public void stopCleaners() {
+        stopAllCleaners();
+    }
+    
+    /**
      * Check if missions are running
      */
     public boolean areMissionsRunning() {
         return missionsRunning;
+    }
+    
+    /**
+     * Check if cleaning missions are running
+     */
+    public boolean areCleanersRunning() {
+        return cleaningMissionsRunning;
     }
     
     /**
@@ -190,6 +319,9 @@ public class RobotManager {
         if (robot instanceof RobotPolluter robotPolluter) {
             polluters.remove(robotPolluter);
         }
+        if (robot instanceof RobotCleaner robotCleaner) {
+            cleaners.remove(robotCleaner);
+        }
         if (robot.getVisualNode() != null) {
             robotLayer.getChildren().remove(robot.getVisualNode());
         }
@@ -202,6 +334,7 @@ public class RobotManager {
         robotLayer.getChildren().clear();
         robots.clear();
         polluters.clear();
+        cleaners.clear();
     }
     
     /**
@@ -248,7 +381,8 @@ public class RobotManager {
     private void updateRobots() {
         for (Robot robot : robots) {
             // Only clean if robot is a standard robot and not moving
-            if (robot != null && !(robot instanceof RobotPolluter) && !robot.isMoving()) {
+            if (robot != null && !(robot instanceof RobotPolluter) && 
+                !(robot instanceof RobotCleaner) && !robot.isMoving()) {
                 cleanCurrentCell(robot);
             }
         }
@@ -279,6 +413,15 @@ public class RobotManager {
     public void resetPolluterMission(RobotPolluter polluter) {
         if (polluter != null) {
             polluter.resetMission();
+        }
+    }
+    
+    /**
+     * Reset a cleaner's mission so it can run again
+     */
+    public void resetCleanerMission(RobotCleaner cleaner) {
+        if (cleaner != null) {
+            cleaner.resetMission();
         }
     }
 
@@ -319,6 +462,41 @@ public class RobotManager {
     }
     
     /**
+     * Start mission for a single cleaner
+     */
+    public void startSingleCleanerMission(RobotCleaner cleaner) {
+        if (cleaner == null) return;
+        
+        // Stop any currently running cleaning missions first
+        stopAllCleaners();
+        
+        // Start a timer for this specific cleaner
+        final int[] stepCount = {0};
+        
+        AnimationTimer missionTimer = new AnimationTimer() {
+            private long lastUpdate = 0;
+            private static final long STEP_DELAY = 500_000_000; // 500ms between steps
+            
+            @Override
+            public void handle(long now) {
+                if (now - lastUpdate >= STEP_DELAY) {
+                    boolean completed = cleaner.executeMissionStep(stepCount[0]);
+                    stepCount[0]++;
+                    
+                    if (completed) {
+                        this.stop();
+                        System.out.println(cleaner + " cleaning mission completed!");
+                    }
+                    
+                    lastUpdate = now;
+                }
+            }
+        };
+        
+        missionTimer.start();
+    }
+    
+    /**
      * Get current robot count
      */
     public int getRobotCount() {
@@ -330,6 +508,13 @@ public class RobotManager {
      */
     public int getPolluterCount() {
         return polluters.size();
+    }
+    
+    /**
+     * Get cleaner count
+     */
+    public int getCleanerCount() {
+        return cleaners.size();
     }
     
     /**
@@ -347,6 +532,13 @@ public class RobotManager {
     }
     
     /**
+     * Get all cleaners
+     */
+    public List<RobotCleaner> getCleaners() {
+        return new ArrayList<>(cleaners);
+    }
+    
+    /**
      * Get a specific robot by index
      */
     public Robot getRobot(int index) {
@@ -354,5 +546,19 @@ public class RobotManager {
             return robots.get(index);
         }
         return null;
+    }
+    
+    /**
+     * Check if robot is a polluter
+     */
+    public boolean isPolluter(Robot robot) {
+        return robot instanceof RobotPolluter;
+    }
+    
+    /**
+     * Check if robot is a cleaner
+     */
+    public boolean isCleaner(Robot robot) {
+        return robot instanceof RobotCleaner;
     }
 }

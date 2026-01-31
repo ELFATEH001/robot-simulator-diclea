@@ -2,6 +2,7 @@ package com.example.ui;
 
 import static com.example.model.GridConstants.GRID_SIZE;
 
+import com.example.cleaning.RobotCleaner;
 import com.example.core.RobotManager;
 import com.example.model.Robot;
 import com.example.pollution.RobotPolluter;
@@ -22,6 +23,7 @@ public class ControlPanel {
     private final Label counterLabel;
     private final Label robotCountLabel;
     private final Label polluterCountLabel;
+    private final Label cleanerCountLabel;
     
     // Cell operation fields
     private final TextField cellRowInput;
@@ -34,8 +36,11 @@ public class ControlPanel {
     
     // Polluter creation fields
     private final ComboBox<String> polluterTypeSelector;
+    private final ComboBox<String> cleanerTypeSelector;
     private final TextField polluterParam1Input;
     private final TextField polluterParam2Input;
+    private final TextField cleanerParam1Input;
+    private final TextField cleanerParam2Input;
 
     public ControlPanel(GridManager gridManager, RobotManager robotManager) {
         this.gridManager = gridManager;
@@ -43,6 +48,7 @@ public class ControlPanel {
         this.counterLabel = new Label("Colored cells: 0");
         this.robotCountLabel = new Label("Robots: 0");
         this.polluterCountLabel = new Label("Polluters: 0");
+        this.cleanerCountLabel = new Label("Cleaners: 0");
         
         // Cell operation inputs
         this.cellRowInput = new TextField();
@@ -55,8 +61,11 @@ public class ControlPanel {
         
         // Polluter creation inputs
         this.polluterTypeSelector = new ComboBox<>();
+        this.cleanerTypeSelector = new ComboBox<>();
         this.polluterParam1Input = new TextField();
         this.polluterParam2Input = new TextField();
+        this.cleanerParam1Input = new TextField();
+        this.cleanerParam2Input = new TextField();
     }
 
     private Label whiteLabel(String text) {
@@ -70,9 +79,10 @@ public class ControlPanel {
         configureCounterLabel();
         configureRobotCountLabel();
         configurePolluterCountLabel();
+        configureCleanerCountLabel();
         Button resetButton = createResetButton();
         
-        HBox controlRow1 = new HBox(15, counterLabel, robotCountLabel, polluterCountLabel, resetButton);
+        HBox controlRow1 = new HBox(15, counterLabel, robotCountLabel, polluterCountLabel, cleanerCountLabel, resetButton);
         controlRow1.setStyle("-fx-alignment: center; -fx-padding: 10;");
 
         // Row 2: Cell operations (dirty/clean)
@@ -99,36 +109,43 @@ public class ControlPanel {
         configurePolluterControls();
         Button createPolluterButton = createPolluterButton();
         Button startSelectedMissionButton = createStartSelectedMissionButton();
-        // Button stopMissionsButton = createStopMissionsButton();
-        
-
         
         HBox controlRow4 = new HBox(10,
             whiteLabel("Polluter:"), polluterTypeSelector, polluterParam1Input, polluterParam2Input,
-            createPolluterButton, startSelectedMissionButton); //, stopMissionsButton);
+            createPolluterButton, startSelectedMissionButton);
         controlRow4.setStyle("-fx-alignment: center; -fx-padding: 10;");
 
-        // Row 5: Robot selection and movement
-        configureRobotSelector();
-        Button moveToButton = createMoveToButton();
-        Button startButton = createStartButton();
-        Button stopButton = createStopButton();
+        // Row 5: Cleaner creation
+        configureCleanerControls();
+        Button createCleanerButton = createCleanerButton();
+        Button startSelectedCleaningButton = createStartSelectedCleaningButton();
         
-        HBox controlRow5 = new HBox(10, 
-            whiteLabel("Select:"), robotSelector, moveToButton, startButton, stopButton);
+        HBox controlRow5 = new HBox(10,
+            whiteLabel("Cleaner:"), cleanerTypeSelector, cleanerParam1Input, cleanerParam2Input,
+            createCleanerButton, startSelectedCleaningButton);
         controlRow5.setStyle("-fx-alignment: center; -fx-padding: 10;");
 
-        // Row 6: Manual robot movement controls
+        // Row 6: Robot selection and movement
+        configureRobotSelector();
+        Button moveToButton = createMoveToButton();
+        Button startAllCleanersButton = createStartAllCleanersButton();
+        Button stopAllCleanersButton = createStopAllCleanersButton();
+        
+        HBox controlRow6 = new HBox(10, 
+            whiteLabel("Select:"), robotSelector, moveToButton, startAllCleanersButton, stopAllCleanersButton);
+        controlRow6.setStyle("-fx-alignment: center; -fx-padding: 10;");
+
+        // Row 7: Manual robot movement controls
         Button upButton = createDirectionButton("▲", () -> moveSelectedRobot("UP"));
         Button downButton = createDirectionButton("▼", () -> moveSelectedRobot("DOWN"));
         Button leftButton = createDirectionButton("◄", () -> moveSelectedRobot("LEFT"));
         Button rightButton = createDirectionButton("►", () -> moveSelectedRobot("RIGHT"));
         
-        HBox controlRow6 = new HBox(10, 
+        HBox controlRow7 = new HBox(10, 
             whiteLabel("Move:"), upButton, downButton, leftButton, rightButton);
-        controlRow6.setStyle("-fx-alignment: center; -fx-padding: 10;");
+        controlRow7.setStyle("-fx-alignment: center; -fx-padding: 10;");
 
-        return new VBox(5, controlRow1, controlRow2, controlRow3, controlRow4, controlRow5, controlRow6);
+        return new VBox(5, controlRow1, controlRow2, controlRow3, controlRow4, controlRow5, controlRow6, controlRow7);
     }
 
     private void configureCounterLabel() {
@@ -141,6 +158,10 @@ public class ControlPanel {
 
     private void configurePolluterCountLabel() {
         polluterCountLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #ff4444;");
+    }
+
+    private void configureCleanerCountLabel() {
+        cleanerCountLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #4CAF50;");
     }
 
     private Button createRemoveSelectedRobotButton() {
@@ -161,6 +182,7 @@ public class ControlPanel {
         robotManager.removeRobot(selectedRobot);
         updateRobotCount();
         updatePolluterCount();
+        updateCleanerCount();
         updateRobotSelector();
     }
 
@@ -171,9 +193,11 @@ public class ControlPanel {
             gridManager.resetGrid();
             robotManager.stopSimulation();
             robotManager.stopMissions();
+            robotManager.stopCleaners();
             robotManager.clearAllRobots();
             updateRobotCount();
             updatePolluterCount();
+            updateCleanerCount();
             updateRobotSelector();
         });
         return resetButton;
@@ -206,8 +230,21 @@ public class ControlPanel {
         polluterParam2Input.setPromptText("Param 2");
         polluterParam2Input.setPrefWidth(80);
         
-        // Set default values based on polluter type selection
         polluterTypeSelector.setOnAction(e -> updatePolluterParameterHints());
+    }
+
+    private void configureCleanerControls() {
+        cleanerTypeSelector.getItems().addAll("Straight Line", "Jumping", "Free Movement", "Complete Grid");
+        cleanerTypeSelector.setPromptText("Type");
+        cleanerTypeSelector.setPrefWidth(120);
+        
+        cleanerParam1Input.setPromptText("Param 1");
+        cleanerParam1Input.setPrefWidth(80);
+        
+        cleanerParam2Input.setPromptText("Param 2");
+        cleanerParam2Input.setPrefWidth(80);
+        
+        cleanerTypeSelector.setOnAction(e -> updateCleanerParameterHints());
     }
 
     private void updatePolluterParameterHints() {
@@ -233,10 +270,38 @@ public class ControlPanel {
         }
     }
 
+    private void updateCleanerParameterHints() {
+        String selectedType = cleanerTypeSelector.getValue();
+        if (selectedType == null) return;
+        
+        switch (selectedType) {
+            case "Straight Line" -> {
+                cleanerParam1Input.setPromptText("Start Col (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setPromptText("(not used)");
+                cleanerParam2Input.setDisable(true);
+            }
+            case "Jumping" -> {
+                cleanerParam1Input.setPromptText("Start Row (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setPromptText("Start Col (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setDisable(false);
+            }
+            case "Free Movement" -> {
+                cleanerParam1Input.setPromptText("Start Row (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setPromptText("Start Col (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setDisable(false);
+            }
+            case "Complete Grid" -> {
+                cleanerParam1Input.setPromptText("(not used)");
+                cleanerParam2Input.setPromptText("(not used)");
+                cleanerParam1Input.setDisable(true);
+                cleanerParam2Input.setDisable(true);
+            }
+        }
+    }
+
     private void configureRobotSelector() {
         robotSelector.setPromptText("Select Robot");
         robotSelector.setPrefWidth(150);
-        // Set cell factory to display custom text for each robot
         robotSelector.setCellFactory(lv -> new javafx.scene.control.ListCell<Robot>() {
             @Override
             protected void updateItem(Robot robot, boolean empty) {
@@ -244,7 +309,6 @@ public class ControlPanel {
                 setText(empty ? null : robot.toString());
             }
         });
-        // Set button cell for display
         robotSelector.setButtonCell(new javafx.scene.control.ListCell<Robot>() {
             @Override
             protected void updateItem(Robot robot, boolean empty) {
@@ -282,10 +346,24 @@ public class ControlPanel {
         return createButton;
     }
 
+    private Button createCleanerButton() {
+        Button createButton = new Button("Create Cleaner");
+        createButton.setStyle("-fx-font-size: 14px; -fx-background-color: #4CAF50; -fx-text-fill: white;");
+        createButton.setOnAction(e -> handleCreateCleaner());
+        return createButton;
+    }
+
     private Button createStartSelectedMissionButton() {
         Button button = new Button("Start Selected Mission");
         button.setStyle("-fx-font-size: 14px; -fx-background-color: #ff8800; -fx-text-fill: white;");
         button.setOnAction(e -> handleStartSelectedMission());
+        return button;
+    }
+
+    private Button createStartSelectedCleaningButton() {
+        Button button = new Button("Start Selected Cleaning");
+        button.setStyle("-fx-font-size: 14px; -fx-background-color: #4CAF50; -fx-text-fill: white;");
+        button.setOnAction(e -> handleStartSelectedCleaning());
         return button;
     }
 
@@ -297,34 +375,35 @@ public class ControlPanel {
             return;
         }
         
-        // Check if the selected robot is a polluter
         if (!(selectedRobot instanceof RobotPolluter)) {
             System.out.println("Selected robot is not a polluter!");
             return;
         }
         
         RobotPolluter polluter = (RobotPolluter) selectedRobot;
-        
-        // // Reset the polluter's mission if it was already completed
-        // if (polluter.isMissionComplete()) {
-        //     System.out.println("Resetting mission for: " + polluter);
-            
-        // }
         robotManager.resetPolluterMission(polluter);
-        // Start the specific polluter's mission
         robotManager.startSinglePolluterMission(polluter);
         System.out.println("Started mission for: " + polluter);
     }
 
-    // private Button createStopMissionsButton() {
-    //     Button button = new Button("Stop All Missions");
-    //     button.setStyle("-fx-font-size: 14px; -fx-background-color: #ff4444; -fx-text-fill: white;");
-    //     button.setOnAction(e -> {
-    //         robotManager.stopMissions();
-    //         System.out.println("All polluter missions stopped!");
-    //     });
-    //     return button;
-    // }
+    private void handleStartSelectedCleaning() {
+        Robot selectedRobot = robotSelector.getSelectionModel().getSelectedItem();
+        
+        if (selectedRobot == null) {
+            System.out.println("Please select a robot first!");
+            return;
+        }
+        
+        if (!(selectedRobot instanceof RobotCleaner)) {
+            System.out.println("Selected robot is not a cleaner!");
+            return;
+        }
+        
+        RobotCleaner cleaner = (RobotCleaner) selectedRobot;
+        robotManager.resetCleanerMission(cleaner);
+        robotManager.startSingleCleanerMission(cleaner);
+        System.out.println("Started cleaning mission for: " + cleaner);
+    }
 
     private Button createClearRobotsButton() {
         Button clearButton = new Button("Clear All");
@@ -333,6 +412,7 @@ public class ControlPanel {
             robotManager.clearAllRobots();
             updateRobotCount();
             updatePolluterCount();
+            updateCleanerCount();
             updateRobotSelector();
         });
         return clearButton;
@@ -345,22 +425,22 @@ public class ControlPanel {
         return moveToButton;
     }
 
-    private Button createStartButton() {
-        Button startButton = new Button("Start Cleaning");
+    private Button createStartAllCleanersButton() {
+        Button startButton = new Button("Start All Cleaners");
         startButton.setStyle("-fx-font-size: 14px; -fx-background-color: #4CAF50; -fx-text-fill: white;");
         startButton.setOnAction(e -> {
-            robotManager.startSimulation();
-            System.out.println("Cleaning simulation started!");
+            robotManager.startAllCleaners();
+            System.out.println("All cleaners started!");
         });
         return startButton;
     }
 
-    private Button createStopButton() {
-        Button stopButton = new Button("Pause Cleaning");
+    private Button createStopAllCleanersButton() {
+        Button stopButton = new Button("Stop All Cleaners");
         stopButton.setStyle("-fx-font-size: 14px; -fx-background-color: #f44336; -fx-text-fill: white;");
         stopButton.setOnAction(e -> {
-            robotManager.stopSimulation();
-            System.out.println("Cleaning simulation paused!");
+            robotManager.stopAllCleaners();
+            System.out.println("All cleaners stopped!");
         });
         return stopButton;
     }
@@ -435,7 +515,7 @@ public class ControlPanel {
                             Integer.parseInt(polluterParam2Input.getText());
                     jumpRow = Math.max(1, Math.min(jumpRow, GRID_SIZE));
                     jumpCol = Math.max(1, Math.min(jumpCol, GRID_SIZE));
-                    int jumpSize = 2; // Default jump size
+                    int jumpSize = 2;
                     createdPolluter = robotManager.createJumpingPolluter(jumpRow, jumpCol, jumpSize);
                 }
                     
@@ -448,7 +528,7 @@ public class ControlPanel {
                             Integer.parseInt(polluterParam2Input.getText());
                     freeRow = Math.max(1, Math.min(freeRow, GRID_SIZE));
                     freeCol = Math.max(1, Math.min(freeCol, GRID_SIZE));
-                    int maxPollutions = 15; // Default
+                    int maxPollutions = 15;
                     createdPolluter = robotManager.createFreePolluter(freeRow, freeCol, maxPollutions);
                 }
             }
@@ -457,18 +537,15 @@ public class ControlPanel {
             updatePolluterCount();
             updateRobotSelector();
             
-            // Select the newly created polluter
             if (createdPolluter != null) {
                 robotSelector.getSelectionModel().select(createdPolluter);
             }
             
-            // Clear input fields
             polluterParam1Input.clear();
             polluterParam2Input.clear();
             
         } catch (NumberFormatException ex) {
             System.out.println("Invalid polluter parameters! Using random values.");
-            // Create with random parameters
             if (polluterType.equals("Straight Line")) {
                 robotManager.createStraightPolluter((int) (Math.random() * GRID_SIZE) + 1);
             } else {
@@ -479,6 +556,91 @@ public class ControlPanel {
             }
             updateRobotCount();
             updatePolluterCount();
+            updateRobotSelector();
+        }
+    }
+
+    private void handleCreateCleaner() {
+        String cleanerType = cleanerTypeSelector.getValue();
+        if (cleanerType == null || cleanerType.isEmpty()) {
+            System.out.println("Please select a cleaner type first!");
+            return;
+        }
+
+        try {
+            RobotCleaner createdCleaner = null;
+            
+            switch (cleanerType) {
+                case "Straight Line" -> {
+                    int startCol = cleanerParam1Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam1Input.getText());
+                    startCol = Math.max(1, Math.min(startCol, GRID_SIZE));
+                    createdCleaner = robotManager.createStraightCleaner(startCol);
+                }
+                    
+                case "Jumping" -> {
+                    int jumpRow = cleanerParam1Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam1Input.getText());
+                    int jumpCol = cleanerParam2Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam2Input.getText());
+                    jumpRow = Math.max(1, Math.min(jumpRow, GRID_SIZE));
+                    jumpCol = Math.max(1, Math.min(jumpCol, GRID_SIZE));
+                    int jumpSize = 2;
+                    createdCleaner = robotManager.createJumpingCleaner(jumpRow, jumpCol, jumpSize);
+                }
+                    
+                case "Free Movement" -> {
+                    int freeRow = cleanerParam1Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam1Input.getText());
+                    int freeCol = cleanerParam2Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam2Input.getText());
+                    freeRow = Math.max(1, Math.min(freeRow, GRID_SIZE));
+                    freeCol = Math.max(1, Math.min(freeCol, GRID_SIZE));
+                    int maxSteps = GRID_SIZE * GRID_SIZE;
+                    createdCleaner = robotManager.createFreeCleaner(freeRow, freeCol, maxSteps);
+                }
+                    
+                case "Complete Grid" -> {
+                    createdCleaner = robotManager.createCompleteCleaner();
+                }
+            }
+            
+            updateRobotCount();
+            updateCleanerCount();
+            updateRobotSelector();
+            
+            if (createdCleaner != null) {
+                robotSelector.getSelectionModel().select(createdCleaner);
+            }
+            
+            cleanerParam1Input.clear();
+            cleanerParam2Input.clear();
+            
+        } catch (NumberFormatException ex) {
+            System.out.println("Invalid cleaner parameters! Using random values.");
+            switch (cleanerType) {
+                case "Straight Line" -> 
+                    robotManager.createStraightCleaner((int) (Math.random() * GRID_SIZE) + 1);
+                case "Jumping" -> 
+                    robotManager.createJumpingCleaner(
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        2);
+                case "Free Movement" -> 
+                    robotManager.createFreeCleaner(
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        GRID_SIZE * GRID_SIZE);
+                case "Complete Grid" -> 
+                    robotManager.createCompleteCleaner();
+            }
+            updateRobotCount();
+            updateCleanerCount();
             updateRobotSelector();
         }
     }
@@ -541,5 +703,9 @@ public class ControlPanel {
     
     private void updatePolluterCount() {
         polluterCountLabel.setText("Polluters: " + robotManager.getPolluterCount());
+    }
+    
+    private void updateCleanerCount() {
+        cleanerCountLabel.setText("Cleaners: " + robotManager.getCleanerCount());
     }
 }
