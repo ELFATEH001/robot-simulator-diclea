@@ -9,6 +9,7 @@
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/cleaning/NettoyeurSauteurs.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/cleaning/NettoyeurComplet.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/model/GridConstants.java
+/home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/ui/RobotVisualFactory.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/ui/ScreenBuilder.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/core/RobotManager.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/robotsimulator/pollution/RobotPolluter.java

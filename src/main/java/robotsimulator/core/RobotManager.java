@@ -4,9 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.animation.AnimationTimer;
+import javafx.scene.Group;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import robotsimulator.cleaning.NettoyeurComplet;
 import robotsimulator.cleaning.NettoyeurLibre;
 import robotsimulator.cleaning.NettoyeurSauteurs;
@@ -21,6 +20,7 @@ import robotsimulator.pollution.PollueurSauteurs;
 import robotsimulator.pollution.PollueurToutDroit;
 import robotsimulator.pollution.RobotPolluter;
 import robotsimulator.ui.GridManager;
+import robotsimulator.ui.RobotVisualFactory;
 
 /**
  * Manages all robots in the simulation with discrete cell-to-cell movement.
@@ -84,7 +84,14 @@ public class RobotManager {
      * Create a straight line polluter
      */
     public PollueurToutDroit createStraightPolluter(int startCol) {
+        // Check if start position has wall
+        if (gridManager.isWall(1, startCol)) {
+            System.out.println("Cannot place polluter on wall! Adjusting position...");
+            startCol = findNearestNonWallColumn(startCol);
+        }
+        
         PollueurToutDroit polluter = new PollueurToutDroit(startCol, gridManager);
+        polluter.setGridManager(gridManager); // ADD THIS LINE
         robots.add(polluter);
         polluters.add(polluter);
         addVisualRepresentation(polluter);
@@ -96,7 +103,17 @@ public class RobotManager {
      * Create a jumping polluter
      */
     public PollueurSauteurs createJumpingPolluter(int row, int col, int jumpSize) {
+        // Check if position has wall
+        if (gridManager.isWall(row, col)) {
+            System.out.println("Cannot place polluter on wall! Finding alternative...");
+            // Find nearest non-wall position
+            int[] newPos = findNearestNonWallPosition(row, col);
+            row = newPos[0];
+            col = newPos[1];
+        }
+        
         PollueurSauteurs polluter = new PollueurSauteurs(row, col, jumpSize, gridManager);
+        polluter.setGridManager(gridManager); // ADD THIS LINE
         robots.add(polluter);
         polluters.add(polluter);
         addVisualRepresentation(polluter);
@@ -108,7 +125,16 @@ public class RobotManager {
      * Create a free movement polluter
      */
     public PollueurLibre createFreePolluter(int row, int col, int maxPollutions) {
+        // Check if position has wall
+        if (gridManager.isWall(row, col)) {
+            System.out.println("Cannot place polluter on wall! Finding alternative...");
+            int[] newPos = findNearestNonWallPosition(row, col);
+            row = newPos[0];
+            col = newPos[1];
+        }
+        
         PollueurLibre polluter = new PollueurLibre(row, col, maxPollutions, gridManager);
+        polluter.setGridManager(gridManager); // ADD THIS LINE
         robots.add(polluter);
         polluters.add(polluter);
         addVisualRepresentation(polluter);
@@ -120,7 +146,16 @@ public class RobotManager {
      * Create a smart cleaner robot
      */
     public SmartCleaner createSmartCleaner(int row, int col, int maxCleaningSteps) {
+        // Check if position has wall
+        if (gridManager.isWall(row, col)) {
+            System.out.println("Cannot place cleaner on wall! Finding alternative...");
+            int[] newPos = findNearestNonWallPosition(row, col);
+            row = newPos[0];
+            col = newPos[1];
+        }
+        
         SmartCleaner cleaner = new SmartCleaner(row, col, maxCleaningSteps, gridManager);
+        cleaner.setGridManager(gridManager); // ADD THIS LINE
         robots.add(cleaner);
         cleaners.add(cleaner);
         addVisualRepresentation(cleaner);
@@ -132,7 +167,14 @@ public class RobotManager {
      * Create a straight line cleaner
      */
     public NettoyeurToutDroit createStraightCleaner(int startCol) {
+        // Check if start position has wall
+        if (gridManager.isWall(1, startCol)) {
+            System.out.println("Cannot place cleaner on wall! Adjusting position...");
+            startCol = findNearestNonWallColumn(startCol);
+        }
+        
         NettoyeurToutDroit cleaner = new NettoyeurToutDroit(startCol, gridManager);
+        cleaner.setGridManager(gridManager); // ADD THIS LINE
         robots.add(cleaner);
         cleaners.add(cleaner);
         addVisualRepresentation(cleaner);
@@ -144,7 +186,16 @@ public class RobotManager {
      * Create a jumping cleaner
      */
     public NettoyeurSauteurs createJumpingCleaner(int row, int col, int jumpSize) {
+        // Check if position has wall
+        if (gridManager.isWall(row, col)) {
+            System.out.println("Cannot place cleaner on wall! Finding alternative...");
+            int[] newPos = findNearestNonWallPosition(row, col);
+            row = newPos[0];
+            col = newPos[1];
+        }
+        
         NettoyeurSauteurs cleaner = new NettoyeurSauteurs(row, col, jumpSize, gridManager);
+        cleaner.setGridManager(gridManager); // ADD THIS LINE
         robots.add(cleaner);
         cleaners.add(cleaner);
         addVisualRepresentation(cleaner);
@@ -156,7 +207,16 @@ public class RobotManager {
      * Create a free movement cleaner
      */
     public NettoyeurLibre createFreeCleaner(int row, int col, int maxCleaningSteps) {
+        // Check if position has wall
+        if (gridManager.isWall(row, col)) {
+            System.out.println("Cannot place cleaner on wall! Finding alternative...");
+            int[] newPos = findNearestNonWallPosition(row, col);
+            row = newPos[0];
+            col = newPos[1];
+        }
+        
         NettoyeurLibre cleaner = new NettoyeurLibre(row, col, maxCleaningSteps, gridManager);
+        cleaner.setGridManager(gridManager); // ADD THIS LINE
         robots.add(cleaner);
         cleaners.add(cleaner);
         addVisualRepresentation(cleaner);
@@ -169,28 +229,57 @@ public class RobotManager {
      */
     public NettoyeurComplet createCompleteCleaner() {
         NettoyeurComplet cleaner = new NettoyeurComplet(gridManager);
+        cleaner.setGridManager(gridManager); // ADD THIS LINE
         robots.add(cleaner);
         cleaners.add(cleaner);
         addVisualRepresentation(cleaner);
         
         return cleaner;
     }
+
+    private int findNearestNonWallColumn(int startCol) {
+        // Try to find a non-wall column nearby
+        for (int offset = 0; offset < GRID_SIZE; offset++) {
+            // Check left
+            int leftCol = startCol - offset;
+            if (leftCol >= 1 && !gridManager.isWall(1, leftCol)) {
+                return leftCol;
+            }
+            // Check right
+            int rightCol = startCol + offset;
+            if (rightCol <= GRID_SIZE && !gridManager.isWall(1, rightCol)) {
+                return rightCol;
+            }
+        }
+        return 1; // Default to first column
+    }
+
+    private int[] findNearestNonWallPosition(int row, int col) {
+        // Try to find nearest non-wall position
+        for (int radius = 0; radius < GRID_SIZE; radius++) {
+            for (int dr = -radius; dr <= radius; dr++) {
+                for (int dc = -radius; dc <= radius; dc++) {
+                    int newRow = row + dr;
+                    int newCol = col + dc;
+                    
+                    if (newRow >= 1 && newRow <= GRID_SIZE && 
+                        newCol >= 1 && newCol <= GRID_SIZE &&
+                        !gridManager.isWall(newRow, newCol)) {
+                        return new int[]{newRow, newCol};
+                    }
+                }
+            }
+        }
+        return new int[]{1, 1}; // Default position
+    }
     
     /**
      * Add visual representation for a robot
      */
     private void addVisualRepresentation(Robot robot) {
-        Circle circle = new Circle(robot.getRadius());
-        circle.setFill(robot.getColor());
-        circle.setStroke(Color.DARKBLUE);
-        circle.setStrokeWidth(2);
-        
-        // Bind circle position to robot position
-        circle.centerXProperty().bind(robot.xProperty());
-        circle.centerYProperty().bind(robot.yProperty());
-        
-        robotLayer.getChildren().add(circle);
-        robot.setVisualNode(circle);
+        Group visualSpirit = RobotVisualFactory.createVisualSpirit(robot);
+        robotLayer.getChildren().add(visualSpirit);
+        robot.setVisualNode(visualSpirit);
     }
     
     /**
