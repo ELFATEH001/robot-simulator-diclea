@@ -234,7 +234,7 @@ public class ControlPanel {
     }
 
     private void configureCleanerControls() {
-        cleanerTypeSelector.getItems().addAll("Straight Line", "Jumping", "Free Movement", "Complete Grid");
+        cleanerTypeSelector.getItems().addAll("Straight Line", "Jumping", "Free Movement", "Complete Grid", "Smart Cleaner");
         cleanerTypeSelector.setPromptText("Type");
         cleanerTypeSelector.setPrefWidth(120);
         
@@ -246,6 +246,7 @@ public class ControlPanel {
         
         cleanerTypeSelector.setOnAction(e -> updateCleanerParameterHints());
     }
+
 
     private void updatePolluterParameterHints() {
         String selectedType = polluterTypeSelector.getValue();
@@ -295,6 +296,12 @@ public class ControlPanel {
                 cleanerParam2Input.setPromptText("(not used)");
                 cleanerParam1Input.setDisable(true);
                 cleanerParam2Input.setDisable(true);
+            }
+            case "Smart Cleaner" -> {
+                cleanerParam1Input.setPromptText("Start Row (1-" + GRID_SIZE + ")");
+                cleanerParam2Input.setPromptText("Start Col (1-" + GRID_SIZE + ")");
+                cleanerParam1Input.setDisable(false);
+                cleanerParam2Input.setDisable(false);
             }
         }
     }
@@ -608,6 +615,19 @@ public class ControlPanel {
                 case "Complete Grid" -> {
                     createdCleaner = robotManager.createCompleteCleaner();
                 }
+                    
+                case "Smart Cleaner" -> {
+                    int smartRow = cleanerParam1Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam1Input.getText());
+                    int smartCol = cleanerParam2Input.getText().isEmpty() ?
+                            (int) (Math.random() * GRID_SIZE) + 1 :
+                            Integer.parseInt(cleanerParam2Input.getText());
+                    smartRow = Math.max(1, Math.min(smartRow, GRID_SIZE));
+                    smartCol = Math.max(1, Math.min(smartCol, GRID_SIZE));
+                    int maxCleaningSteps = GRID_SIZE * GRID_SIZE; // Default to clean entire grid
+                    createdCleaner = robotManager.createSmartCleaner(smartRow, smartCol, maxCleaningSteps);
+                }
             }
             
             updateRobotCount();
@@ -638,13 +658,17 @@ public class ControlPanel {
                         GRID_SIZE * GRID_SIZE);
                 case "Complete Grid" -> 
                     robotManager.createCompleteCleaner();
+                case "Smart Cleaner" -> 
+                    robotManager.createSmartCleaner(
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        (int) (Math.random() * GRID_SIZE) + 1,
+                        GRID_SIZE * GRID_SIZE);
             }
             updateRobotCount();
             updateCleanerCount();
             updateRobotSelector();
         }
     }
-
     private void handleMoveToPosition() {
         Robot selectedRobot = getSelectedRobot();
         if (selectedRobot == null) {

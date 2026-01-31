@@ -130,6 +130,70 @@ public class GridManager {
             notifyStateChanged();
         }
     }
+    
+    /**
+     * Check if a cell is dirty/colored
+     * @param row 1-based row index
+     * @param col 1-based column index
+     * @return true if the cell is dirty/colored, false otherwise
+     */
+    public boolean isCellDirty(int row, int col) {
+        row--;
+        col--;
+        if (!isValidPosition(row, col)) {
+            return false;
+        }
+        return cells[row][col].isColored();
+    }
+    
+    /**
+     * Check if a cell is dirty/colored (0-based version)
+     * @param row 0-based row index
+     * @param col 0-based column index
+     * @return true if the cell is dirty/colored, false otherwise
+     */
+    public boolean isCellDirtyZeroBased(int row, int col) {
+        if (!isValidPosition(row, col)) {
+            return false;
+        }
+        return cells[row][col].isColored();
+    }
+    
+    /**
+     * Get the color of a specific cell
+     * @param row 1-based row index
+     * @param col 1-based column index
+     * @return the color of the cell, or null if position is invalid
+     */
+    public Color getCellColor(int row, int col) {
+        row--;
+        col--;
+        if (!isValidPosition(row, col)) {
+            return null;
+        }
+        return (Color) cells[row][col].getFill();
+    }
+    
+    /**
+     * Get all dirty cells positions (0-based)
+     * @return list of [row, col] arrays for dirty cells
+     */
+    public int[][] getDirtyCells() {
+        int[][] dirtyCells = new int[coloredCount][2];
+        int index = 0;
+        
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
+                if (cells[row][col].isColored()) {
+                    dirtyCells[index][0] = row;
+                    dirtyCells[index][1] = col;
+                    index++;
+                }
+            }
+        }
+        
+        return dirtyCells;
+    }
 
     private boolean isValidPosition(int row, int col) {
         return row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE;

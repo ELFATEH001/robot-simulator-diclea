@@ -8,6 +8,7 @@ import com.example.cleaning.NettoyeurLibre;
 import com.example.cleaning.NettoyeurSauteurs;
 import com.example.cleaning.NettoyeurToutDroit;
 import com.example.cleaning.RobotCleaner;
+import com.example.cleaning.SmartCleaner;
 import static com.example.model.GridConstants.CELL_SIZE;
 import static com.example.model.GridConstants.GRID_SIZE;
 import com.example.model.Robot;
@@ -106,6 +107,18 @@ public class RobotManager {
         addVisualRepresentation(polluter);
         
         return polluter;
+    }
+
+    /**
+     * Create a smart cleaner robot
+     */
+    public SmartCleaner createSmartCleaner(int row, int col, int maxCleaningSteps) {
+        SmartCleaner cleaner = new SmartCleaner(row, col, maxCleaningSteps, gridManager);
+        robots.add(cleaner);
+        cleaners.add(cleaner);
+        addVisualRepresentation(cleaner);
+        
+        return cleaner;
     }
     
     /**

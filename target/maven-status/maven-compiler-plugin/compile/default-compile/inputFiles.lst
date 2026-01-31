@@ -8,6 +8,7 @@
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/pollution/RobotPolluter.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/cleaning/NettoyeurToutDroit.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/cleaning/RobotCleaner.java
+/home/aimane/robotics/java/robot-simulator/src/main/java/com/example/cleaning/SmartCleaner.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/ui/ControlPanel.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/ui/ScreenBuilder.java
 /home/aimane/robotics/java/robot-simulator/src/main/java/com/example/ui/GridManager.java

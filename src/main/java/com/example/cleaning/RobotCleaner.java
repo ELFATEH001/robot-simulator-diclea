@@ -33,11 +33,7 @@ public abstract class RobotCleaner extends Robot {
     /**
      * Pollute the current cell
      */
-    protected void polluteCurrentCell() {
-        if (gridManager != null) {
-            gridManager.dirtyCell(getGridRowOneBased(), getGridColOneBased());
-        }
-    }
+    
     
     /**
      * Check if mission is complete
